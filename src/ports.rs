@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use tokio::{task::JoinHandle, sync::mpsc::{Receiver, Sender}};
 
-struct ReceiverStruct {
+struct _ReceiverStruct {
     socket: zmq::Socket,
 }
+
 
 /// Trait for ability to create an instance of Self.
 #[async_trait]
@@ -32,7 +33,6 @@ where
         while let Some(msg) = receiver.recv().await {
             socket.send::<zmq::Message>(msg.into(), 0).expect("Failed to send message")
         }
-        todo!()
     }
 }
 
@@ -48,16 +48,13 @@ where
     // }
 
     /// Initialize this `Adapter`.
-    fn init(ctx: zmq::Context, endpoint: String) -> Sender<<<Self as Adapter>::Actor as Actor>::Message> {
-    // fn init(ctx: zmq::Context, endpoint: String) -> (Self, JoinHandle<()>) {
+    fn init(ctx: zmq::Context, endpoint: String) -> (Sender<<<Self as Adapter>::Actor as Actor>::Message>, JoinHandle<()>) {
         let (
             sender,
             receiver
         ) = tokio::sync::mpsc::channel::<<<Self as Adapter>::Actor as Actor>::Message>(100);
         let mut actor: Self::Actor = Actor::new(ctx, endpoint);
-        tokio::spawn(async move { actor.run(receiver).await });
-        // Self { sender }
-        // todo!()
-        sender
+        let handle = tokio::spawn(async move { actor.run(receiver).await });
+        (sender, handle)
     }
 }

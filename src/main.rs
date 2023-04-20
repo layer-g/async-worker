@@ -1,3 +1,8 @@
+use async_workers::EngineAdapter;
+use async_workers::ports::Adapter;
+
 fn main() {
-    println!("Hello, world!");
+    let ctx = zmq::Context::new();
+    let endpoint = "something".to_string();
+    let _channel = EngineAdapter::init(ctx, endpoint);
 }

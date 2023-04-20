@@ -1,2 +1,4 @@
-mod ports;
+pub mod ports;
 mod adapters;
+
+pub use adapters::EngineAdapter;

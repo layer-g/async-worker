@@ -44,9 +44,3 @@ pub struct EngineAdapter;
 impl Adapter for EngineAdapter {
     type Actor = EngineActor;
 }
-
-fn test() {
-    let ctx = zmq::Context::new();
-    let endpoint = "something".to_string();
-    let channel = EngineAdapter::init(ctx, endpoint);
-}
