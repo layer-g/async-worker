@@ -1,5 +1,4 @@
-use crate::ports::{Actor, Adapter};
-use async_trait::async_trait;
+use crate::ports::Adapter;
 use bytes::Bytes;
 
 pub struct EngineMessage(Bytes);
@@ -21,26 +20,27 @@ pub struct EngineActor {
     endpoint: String,
 }
 
-#[async_trait]
-impl Actor for EngineActor {
+// #[async_trait]
+// impl Actor for EngineActor {
 
-    type Message = EngineMessage;
+//     type Message = EngineMessage;
 
-    fn new(ctx: zmq::Context, endpoint: String) -> Self {
-        Self { ctx, endpoint }
-    }
+//     fn new(ctx: zmq::Context, endpoint: String) -> Self {
+//         Self { ctx, endpoint }
+//     }
 
-    fn ctx(&self) -> &zmq::Context {
-        &self.ctx
-    }
+//     fn ctx(&self) -> &zmq::Context {
+//         &self.ctx
+//     }
 
-    fn endpoint(&self) -> &str {
-        &self.endpoint
-    }
-}
+//     fn endpoint(&self) -> &str {
+//         &self.endpoint
+//     }
+// }
 
 pub struct EngineAdapter;
 
 impl Adapter for EngineAdapter {
-    type Actor = EngineActor;
+    // type Actor = EngineActor;
+    type M = EngineMessage;
 }
