@@ -15,32 +15,6 @@ impl From<EngineMessage> for zmq::Message {
     }
 }
 
-pub struct EngineActor {
-    ctx: zmq::Context,
-    endpoint: String,
-}
-
-// #[async_trait]
-// impl Actor for EngineActor {
-
-//     type Message = EngineMessage;
-
-//     fn new(ctx: zmq::Context, endpoint: String) -> Self {
-//         Self { ctx, endpoint }
-//     }
-
-//     fn ctx(&self) -> &zmq::Context {
-//         &self.ctx
-//     }
-
-//     fn endpoint(&self) -> &str {
-//         &self.endpoint
-//     }
-// }
-
 pub struct EngineAdapter;
 
-impl Adapter for EngineAdapter {
-    // type Actor = EngineActor;
-    type M = EngineMessage;
-}
+impl Adapter for EngineAdapter { type M = EngineMessage; }
