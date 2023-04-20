@@ -1,4 +1,4 @@
-use super::{SenderStruct, /*SenderStruct*/};
+use super::{SenderStruct, ReceiverStruct};
 use tokio::{task::JoinHandle, sync::mpsc::{Receiver, Sender}};
 
 pub trait AdapterSend
@@ -19,17 +19,19 @@ pub trait AdapterSend
     }
 }
 
-// pub trait AdapterSend {
-//     type M: Send + Sync + Into<zmq::Message> + 'static;
-//     /// Initialize this `Adapter`.
-//     // fn init(ctx: zmq::Context, endpoint: String) -> (Sender<<<Self as Adapter>::Actor as Actor>::Message>, JoinHandle<()>) {
-//     fn init(ctx: &zmq::Context, endpoint: &String) -> (Sender<Self::M>, JoinHandle<()>) {
-//         let (
-//             sender,
-//             receiver
-//         ) = tokio::sync::mpsc::channel::<Self::M>(100);
-//         let mut actor = SenderStruct::<<Self as AdapterSend>::M>::new(ctx, endpoint);
-//         let handle = tokio::spawn(async move { actor.run(receiver).await });
-//         (sender, handle)
-//     }
-// }
+pub trait AdapterRecv {
+    type Error;
+    // type M: Send + Sync + zmq::Sendable + std::fmt::Debug + TryFrom<zmq::Message, Error = Self::Error> + 'static;
+    type M: Send + Sync + zmq::Sendable + std::fmt::Debug + TryFrom<zmq::Message, Error = Self::Error> + 'static;
+    /// Initialize this `Adapter`.
+    // fn init(ctx: zmq::Context, endpoint: String) -> (Sender<<<Self as Adapter>::Actor as Actor>::Message>, JoinHandle<()>) {
+    fn init(ctx: &zmq::Context, endpoint: &String) -> (Sender<Self::M>, JoinHandle<()>) {
+        let (
+            sender,
+            receiver
+        ) = tokio::sync::mpsc::channel::<Self::M>(100);
+        let mut actor = ReceiverStruct::new(ctx, endpoint);
+        let handle = tokio::spawn(async move { actor.run(sender).await });
+        (sender, handle)
+    }
+}
