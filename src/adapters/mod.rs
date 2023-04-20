@@ -1,8 +1,8 @@
 mod receiver;
-// mod sender;
+mod sender;
+pub use sender::SenderStruct;
 pub use receiver::ReceiverStruct;
-// pub use sender::SenderStruct;
-use crate::ports::{AdapterRecv, /*AdapterSend*/};
+use crate::ports::{AdapterSend, /*AdapterSend*/};
 use bytes::Bytes;
 
 pub struct EngineMessage(Bytes);
@@ -21,7 +21,7 @@ impl From<EngineMessage> for zmq::Message {
 
 pub struct EngineAdapter;
 
-impl AdapterRecv for EngineAdapter {
+impl AdapterSend for EngineAdapter {
     // type ExternalMessage = zmq::Message;
     type InternalMessage = EngineMessage;
 }

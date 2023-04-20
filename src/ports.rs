@@ -1,7 +1,7 @@
-use super::{ReceiverStruct, /*SenderStruct*/};
+use super::{SenderStruct, /*SenderStruct*/};
 use tokio::{task::JoinHandle, sync::mpsc::{Receiver, Sender}};
 
-pub trait AdapterRecv
+pub trait AdapterSend
 // where zmq::Message: From<<Self as AdapterRecv>::InternalMessage>
 {
     // type ExternalMessage: From<Self::InternalMessage>;
@@ -13,7 +13,7 @@ pub trait AdapterRecv
             sender,
             receiver
         ) = tokio::sync::mpsc::channel::<Self::InternalMessage>(100);
-        let mut actor = ReceiverStruct::new(ctx, endpoint);
+        let mut actor = SenderStruct::new(ctx, endpoint);
         let handle = tokio::spawn(async move { actor.run(receiver).await });
         (sender, handle)
     }
