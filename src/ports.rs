@@ -2,7 +2,7 @@ use super::{ReceiverStruct, /*SenderStruct*/};
 use tokio::{task::JoinHandle, sync::mpsc::{Receiver, Sender}};
 
 pub trait AdapterRecv
-where zmq::Message: From<<Self as AdapterRecv>::InternalMessage>
+// where zmq::Message: From<<Self as AdapterRecv>::InternalMessage>
 {
     // type ExternalMessage: From<Self::InternalMessage>;
     type InternalMessage: Send + Sync + 'static + zmq::Sendable; //Into<Self::ExternalMessage> + 'static;
