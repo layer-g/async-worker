@@ -1,5 +1,3 @@
-use async_workers::EngineAdapter;
-// use async_workers::ports::Adapter;
 
 fn main() {
     let ctx = zmq::Context::new();

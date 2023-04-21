@@ -2,8 +2,8 @@ mod receiver;
 mod sender;
 use std::ops::Deref;
 
-pub use sender::SenderStruct;
-pub use receiver::ReceiverStruct;
+pub use sender::SendActor;
+pub use receiver::RecvActor;
 use crate::ports::{AdapterSend, /*AdapterSend*/};
 use bytes::Bytes;
 use thiserror::Error;

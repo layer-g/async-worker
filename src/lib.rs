@@ -1,4 +1,4 @@
 pub mod ports;
 mod adapters;
 
-pub use adapters::{EngineAdapter, SenderStruct, ReceiverStruct};
+pub use adapters::{EngineAdapter, SendActor, RecvActor};

@@ -1,28 +1,21 @@
-use std::{marker::PhantomData, pin::Pin, future::Future};
-use pin_utils::pin_mut;
-use tokio::{sync::mpsc::Sender, task::JoinHandle, pin};
-
+use std::marker::PhantomData;
+use tokio::sync::mpsc::Sender;
 use crate::ports::AdapterRecv;
-
 use super::{EngineMessage, EngineError};
 
-// pub struct ReceiverStruct<'a, M, E> {
-pub struct ReceiverStruct<M, E> {
+pub struct RecvActor<M, E> {
     socket: zmq::Socket,
     _phantom: PhantomData<(M, E)>,
 }
 
-// impl<'a, M, E> AdapterRecv for ReceiverStruct<'a, M, E> {
-impl<M, E> AdapterRecv for ReceiverStruct<M, E> {
+impl<M, E> AdapterRecv for RecvActor<M, E> {
     type Error = EngineError;
     type M = EngineMessage;
 }
 
 /// Send zmq messages
-// impl<'a, M, E> ReceiverStruct<'a, M, E>
-impl<M, E> ReceiverStruct<M, E>
+impl<M, E> RecvActor<M, E>
 where
-    // M: TryFrom<zmq::Message, Error = <Self as AdapterRecv>::Error> + std::fmt::Debug,
     M: Send + Sync + zmq::Sendable + std::fmt::Debug + TryFrom<zmq::Message, Error = E> + 'static,
     E: Send + Sync + From<zmq::Error> + std::fmt::Debug,
 {
@@ -42,7 +35,7 @@ where
     /// Run loop to receive from socket.
     pub async fn run(&mut self, sender: Sender<M>) {
         loop {
-            match ReceiverStruct::<M, E>::receive_message(&self.socket) {
+            match RecvActor::<M, E>::receive_message(&self.socket) {
                 Ok(msg) => {
                     let msg = msg.try_into().unwrap();
                     // sender.send(msg).await.expect("Failed to send msg on tokio channel");

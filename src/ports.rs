@@ -1,4 +1,4 @@
-use super::{SenderStruct, ReceiverStruct};
+use super::{SendActor, RecvActor};
 use tokio::{task::JoinHandle, sync::mpsc::{Receiver, Sender}};
 
 pub trait AdapterSend
@@ -10,7 +10,7 @@ pub trait AdapterSend
             sender,
             receiver
         ) = tokio::sync::mpsc::channel::<Self::M>(100);
-        let mut actor = SenderStruct::new(ctx, endpoint);
+        let mut actor = SendActor::new(ctx, endpoint);
         let handle = tokio::spawn(async move { actor.run(receiver).await });
         (sender, handle)
     }
@@ -34,7 +34,7 @@ pub trait AdapterRecv {
             sender,
             receiver
         ) = tokio::sync::mpsc::channel::<Self::M>(100);
-        let mut actor = ReceiverStruct::<Self::M, Self::Error>::new(ctx, endpoint);
+        let mut actor = RecvActor::<Self::M, Self::Error>::new(ctx, endpoint);
         let handle = tokio::spawn(async move{actor.run(sender).await });
 
         (receiver, handle)

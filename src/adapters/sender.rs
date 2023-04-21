@@ -1,22 +1,19 @@
-
 use std::marker::PhantomData;
 use tokio::sync::mpsc::Receiver;
-
 use crate::ports::AdapterSend;
-
 use super::EngineMessage;
 
-pub struct SenderStruct<M> {
+pub struct SendActor<M> {
     socket: zmq::Socket,
     _phantom: PhantomData<M>,
 }
 
-impl<M> AdapterSend for SenderStruct<M> {
+impl<M> AdapterSend for SendActor<M> {
     type M = EngineMessage;
 }
 
 /// Receive external ZMQ messages
-impl<M> SenderStruct<M>
+impl<M> SendActor<M>
 where
     M: zmq::Sendable,
 {
