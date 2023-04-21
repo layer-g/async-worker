@@ -57,13 +57,7 @@ where
     }
 
     /// Run loop to receive from socket.
-    // pub async fn run(self: Pin<&mut Self>, sender: Sender<M>, socket: &zmq::Socket) {
-    // pub async fn run(self: Pin<&mut Self>, sender: Sender<M>) {
-    // pub async fn run(&mut self, sender: Sender<M>, socket: &Pin<&mut zmq::Socket>) -> dyn Future<Output = ()> + Send + 'static {
-    // pub async fn run(&mut self, sender: Sender<M>) {
     pub fn run(&mut self, sender: Sender<M>) -> JoinHandle<()> {
-    // pub async fn run(&mut self, sender: Sender<M>, socket: &zmq::Socket) {
-        // let (tx, rx)  = tokio::sync::mpsc::channel(1);
         let socket = self.ctx().clone().socket(zmq::PULL).expect("Failed to create PULL socket");
         socket.connect(self.endpoint().clone()).expect("Failed to connect PULL socket");
 
@@ -84,6 +78,5 @@ where
                 }
             }
         })
-        // };
     }
 }
