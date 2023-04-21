@@ -34,19 +34,43 @@ where
     /// Run loop to receive from socket.
     pub async fn run(&mut self, sender: Sender<M>) {
         loop {
+            println!("receiver loop");
             match RecvActor::<M, E>::receive_message(&self.socket) {
                 Ok(msg) => {
+                    println!("receive loop - msg okay");
                     let msg = msg.try_into().unwrap();
                     // sender.send(msg).await.expect("Failed to send msg on tokio channel");
                     // todo!()
-                    tokio::spawn({
+                    let send_handle = tokio::spawn({
                         let sender = sender.clone();
-                        async move { let _ = sender.send(msg).await; }
+                        println!("receive loop - inside sub spawn");
+                        async move { let _ = sender.send(msg).await; println!("receive loop - inside async move") }
                     });
                 },
-                Err(e) => panic!("{e:?}"),
+                Err(e) => {
+                    println!("receive loop - msg Err");
+                    panic!("{e:?}");
+                }
             }
         }
+        // loop {
+        //     tokio::select! {
+        //         msg = RecvActor::<M, E>::receive_message(&self.socket) => {
+        //             match msg {
+        //                 Ok(msg) => {
+        //                     let msg = msg.try_into().unwrap();
+        //                     tokio::spawn({
+        //                         let sender = sender.clone();
+        //                         async move { let _ = sender.send(msg).await; }
+        //                     });
+        //                 },
+        //                 Err(e) => panic!("{e:?}"),
+        //             }
+        //         },
+        //         _ = stop_receiver => {
+        //             break;
+        //         }
+        //     }
     }
 }
 
