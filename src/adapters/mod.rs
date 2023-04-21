@@ -1,5 +1,7 @@
 mod receiver;
 mod sender;
+use std::ops::Deref;
+
 pub use sender::SenderStruct;
 pub use receiver::ReceiverStruct;
 use crate::ports::{AdapterSend, /*AdapterSend*/};
@@ -34,7 +36,7 @@ impl TryFrom<zmq::Message> for EngineMessage {
     type Error = EngineError;
 
     fn try_from(value: zmq::Message) -> Result<Self, Self::Error> {
-        Ok(Self(Bytes::default()))
+        Ok(Self(value.deref().to_owned().into()))
     }
 }
 
@@ -42,5 +44,5 @@ pub struct EngineAdapter;
 
 impl AdapterSend for EngineAdapter {
     // type ExternalMessage = zmq::Message;
-    type InternalMessage = EngineMessage;
+    type M = EngineMessage;
 }

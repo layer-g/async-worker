@@ -12,14 +12,13 @@ pub struct SenderStruct<M> {
 }
 
 impl<M> AdapterSend for SenderStruct<M> {
-    type InternalMessage = EngineMessage;
+    type M = EngineMessage;
 }
 
 /// Receive external ZMQ messages
 impl<M> SenderStruct<M>
 where
-    M: zmq::Sendable,// Into<zmq::Message>// + From<<Self as AdapterRecv>::InternalMessage>
-    // zmq::Message: From<M>
+    M: zmq::Sendable,
 {
     /// Create a new instance of self.
     pub fn new(ctx: &zmq::Context, endpoint: &str) -> Self {
