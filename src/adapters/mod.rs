@@ -9,7 +9,7 @@ use bytes::Bytes;
 use thiserror::Error;
 
 #[derive(Debug)]
-pub struct EngineMessage(Bytes);
+pub struct EngineMessage(pub Bytes);
 
 #[derive(Debug, Clone, Copy, Error)]
 pub enum EngineError {

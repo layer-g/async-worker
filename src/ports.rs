@@ -4,6 +4,7 @@ use tokio::{task::JoinHandle, sync::mpsc::{Receiver, Sender}};
 pub trait AdapterSend
 {
     type M: Send + Sync + 'static + zmq::Sendable; //Into<Self::ExternalMessage> + 'static;
+
     /// Initialize this `Adapter`.
     fn init(ctx: &zmq::Context, endpoint: &str) -> (Sender<Self::M>, JoinHandle<()>) {
         let (
@@ -28,6 +29,7 @@ pub trait AdapterRecv {
         + From<zmq::Error>
         + std::fmt::Debug
         + 'static;
+
     /// Initialize this `Adapter`.
     fn init(ctx: &zmq::Context, endpoint: &str) -> (Receiver<Self::M>, JoinHandle<()>) {
         let (
