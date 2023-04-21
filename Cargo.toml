@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 bytes = "1.4.0"
+pin-utils = "0.1.0"
 thiserror = "1.0.40"
 tokio = { version = "1.27.0", features = ["rt-multi-thread", "macros", "sync"] }
 zmq = "0.10.0"
