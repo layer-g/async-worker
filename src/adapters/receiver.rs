@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 use tokio::{sync::mpsc::{Sender, Receiver}, task::JoinHandle};
+use tokio_util::sync::CancellationToken;
 use super::{EngineMessage, EngineError};
 
 pub struct RecvActor<M, E> {
@@ -32,7 +33,8 @@ where
     }
 
     /// Run loop to receive from socket.
-    pub async fn run(&mut self, sender: Sender<M>) {
+    pub async fn run(&mut self, sender: Sender<M>, token: CancellationToken) {
+        tokio::pin!(token);
         loop {
             println!("receiver loop");
             match RecvActor::<M, E>::receive_message(&self.socket) {
@@ -41,36 +43,23 @@ where
                     let msg = msg.try_into().unwrap();
                     // sender.send(msg).await.expect("Failed to send msg on tokio channel");
                     // todo!()
-                    let send_handle = tokio::spawn({
+                    tokio::spawn({
                         let sender = sender.clone();
+                        let token = token.clone();
                         println!("receive loop - inside sub spawn");
-                        async move { let _ = sender.send(msg).await; println!("receive loop - inside async move") }
+                        async move {
+                            tokio::select! {
+                                _ = sender.send(msg) => println!("sent"),//.await.expect("receive loop - inside async move");
+                                _ = token.cancelled() => println!("cancelled"),
+                            }
+                        }
                     });
-                },
+                }
                 Err(e) => {
-                    println!("receive loop - msg Err");
-                    panic!("{e:?}");
+                    panic!("Error receiving zmq socket: {e:?}");
                 }
             }
         }
-        // loop {
-        //     tokio::select! {
-        //         msg = RecvActor::<M, E>::receive_message(&self.socket) => {
-        //             match msg {
-        //                 Ok(msg) => {
-        //                     let msg = msg.try_into().unwrap();
-        //                     tokio::spawn({
-        //                         let sender = sender.clone();
-        //                         async move { let _ = sender.send(msg).await; }
-        //                     });
-        //                 },
-        //                 Err(e) => panic!("{e:?}"),
-        //             }
-        //         },
-        //         _ = stop_receiver => {
-        //             break;
-        //         }
-        //     }
     }
 }
 
@@ -88,14 +77,18 @@ pub trait AdapterRecv {
         + 'static;
 
     /// Initialize this `Adapter`.
-    fn init(ctx: &zmq::Context, endpoint: &str) -> (Receiver<Self::M>, JoinHandle<()>) {
+    fn init(ctx: &zmq::Context, endpoint: &str) -> (Receiver<Self::M>, JoinHandle<()>, CancellationToken) {
         let (
             sender,
             receiver
         ) = tokio::sync::mpsc::channel::<Self::M>(100);
         let mut actor = RecvActor::<Self::M, Self::Error>::new(ctx, endpoint);
-        let handle = tokio::spawn(async move{actor.run(sender).await });
+        let cancel_token = CancellationToken::new();
+        let handle = tokio::spawn({
+            let cancel_token = cancel_token.clone();
+            async move{actor.run(sender, cancel_token).await }
+        });
 
-        (receiver, handle)
+        (receiver, handle, cancel_token)
     }
 }

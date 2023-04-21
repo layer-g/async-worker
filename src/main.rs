@@ -7,7 +7,7 @@ async fn main() {
     let endpoint = "tcp://127.0.0.1:6969".to_string();
     // actors
     let (messenger, send_handle) = SendActor::<EngineMessage>::init(&ctx, &endpoint);
-    let (mut engine, recv_handle) = RecvActor::<EngineMessage, EngineError>::init(&ctx, &endpoint);
+    let (mut engine, recv_handle, cancel_token) = RecvActor::<EngineMessage, EngineError>::init(&ctx, &endpoint);
 
     // keep track of the number of messages
     let mut count = 0;
@@ -63,6 +63,7 @@ async fn main() {
     send_handle.abort();
     let res = send_handle.await;
     println!("res3: {res:?}");
+    cancel_token.cancel();
     recv_handle.abort();
     let res = recv_handle.await;
     println!("res4: {res:?}");
