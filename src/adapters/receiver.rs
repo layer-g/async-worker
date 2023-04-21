@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
-use tokio::sync::mpsc::Sender;
-use crate::ports::AdapterRecv;
+use tokio::{sync::mpsc::{Sender, Receiver}, task::JoinHandle};
 use super::{EngineMessage, EngineError};
 
 pub struct RecvActor<M, E> {
@@ -48,5 +47,31 @@ where
                 Err(e) => panic!("{e:?}"),
             }
         }
+    }
+}
+
+pub trait AdapterRecv {
+    type M: Send
+        + Sync
+        + zmq::Sendable
+        + std::fmt::Debug
+        + TryFrom<zmq::Message, Error = Self::Error>
+        + 'static;
+    type Error: Send
+        + Sync
+        + From<zmq::Error>
+        + std::fmt::Debug
+        + 'static;
+
+    /// Initialize this `Adapter`.
+    fn init(ctx: &zmq::Context, endpoint: &str) -> (Receiver<Self::M>, JoinHandle<()>) {
+        let (
+            sender,
+            receiver
+        ) = tokio::sync::mpsc::channel::<Self::M>(100);
+        let mut actor = RecvActor::<Self::M, Self::Error>::new(ctx, endpoint);
+        let handle = tokio::spawn(async move{actor.run(sender).await });
+
+        (receiver, handle)
     }
 }

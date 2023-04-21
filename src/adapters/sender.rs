@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
-use tokio::sync::mpsc::Receiver;
-use crate::ports::AdapterSend;
+use tokio::{sync::mpsc::{Receiver, Sender}, task::JoinHandle};
 use super::EngineMessage;
 
 pub struct SendActor<M> {
@@ -30,5 +29,21 @@ where
         while let Some(msg) = receiver.recv().await {
             self.socket.send::<M>(msg.into(), 0).expect("Failed to send message")
         }
+    }
+}
+
+pub trait AdapterSend
+{
+    type M: Send + Sync + 'static + zmq::Sendable; //Into<Self::ExternalMessage> + 'static;
+
+    /// Initialize this `Adapter`.
+    fn init(ctx: &zmq::Context, endpoint: &str) -> (Sender<Self::M>, JoinHandle<()>) {
+        let (
+            sender,
+            receiver
+        ) = tokio::sync::mpsc::channel::<Self::M>(100);
+        let mut actor = SendActor::new(ctx, endpoint);
+        let handle = tokio::spawn(async move { actor.run(receiver).await });
+        (sender, handle)
     }
 }

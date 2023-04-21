@@ -1,4 +1,3 @@
-pub mod ports;
 mod adapters;
 
-pub use adapters::{SendActor, RecvActor, EngineMessage, EngineError};
+pub use adapters::{SendActor, RecvActor, EngineMessage, EngineError, AdapterRecv, AdapterSend};

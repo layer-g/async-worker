@@ -2,11 +2,11 @@ mod receiver;
 mod sender;
 use std::ops::Deref;
 
-pub use sender::SendActor;
-pub use receiver::RecvActor;
-use crate::ports::{AdapterSend, /*AdapterSend*/};
+pub use sender::{SendActor, AdapterSend};
+pub use receiver::{RecvActor, AdapterRecv};
 use bytes::Bytes;
 use thiserror::Error;
+
 
 #[derive(Debug)]
 pub struct EngineMessage(pub Bytes);
