@@ -3,7 +3,7 @@ use bytes::Bytes;
 
 #[tokio::main]
 async fn main() {
-    let ctx = zmq::Context::new();
+    let ctx = tmq::Context::new();
     let endpoint = "tcp://127.0.0.1:6969".to_string();
     // actors
     let (messenger, send_handle) = SendActor::<EngineMessage>::init(&ctx, &endpoint);
@@ -15,12 +15,14 @@ async fn main() {
     
     // spawn messenger task
     let messenger = tokio::spawn(async move {
+        let mut count = 0;
         let format = format!("message: {count:?}");
         loop {
             tokio::select! {
                 _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {
                     let msg = EngineMessage(Bytes::from(format.clone()));
                     let _ = messenger.send(msg).await;
+                    count += 1;
                 }
 
                 _ = stop_receiver.recv() => break
@@ -35,7 +37,7 @@ async fn main() {
 
         tokio::select! {
             _ = interval.tick() => {
-                println!("interval");
+                // println!("interval");
                 if count == 10 {
                     println!("interval break. count: {count:?}");
                     break
@@ -64,7 +66,9 @@ async fn main() {
     let res = send_handle.await;
     println!("res3: {res:?}");
     cancel_token.cancel();
+    println!("called cancel_token");
     recv_handle.abort();
+    println!("called on abort");
     let res = recv_handle.await;
     println!("res4: {res:?}");
     println!("count: {count:#?}");

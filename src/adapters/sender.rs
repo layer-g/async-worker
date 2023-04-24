@@ -1,9 +1,11 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, collections::VecDeque};
+use futures::SinkExt;
+use tmq::Multipart;
 use tokio::{sync::mpsc::{Receiver, Sender}, task::JoinHandle};
 use super::EngineMessage;
 
 pub struct SendActor<M> {
-    socket: zmq::Socket,
+    socket: tmq::push::Push,
     _phantom: PhantomData<M>,
 }
 
@@ -11,33 +13,38 @@ impl<M> AdapterSend for SendActor<M> {
     type M = EngineMessage;
 }
 
-/// Receive external ZMQ messages
+/// Receive external tmq messages
 impl<M> SendActor<M>
 where
-    M: zmq::Sendable,
+    M: Into<Multipart>,
 {
     /// Create a new instance of self.
-    pub fn new(ctx: &zmq::Context, endpoint: &str) -> Self {
+    pub fn new(ctx: &tmq::Context, endpoint: &str) -> Self {
         // create + bind socket
-        let socket = ctx.socket(zmq::PUSH).expect("Failed to create PUSH socket");
-        socket.bind(endpoint).expect("Failed to bind PUSH socket");
+        // let socket = ctx.socket(tmq::pushPUSH).expect("Failed to create PUSH socket");
+        let socket = tmq::push(&ctx);
+        let socket = socket.bind(endpoint).expect("Failed to bind PUSH socket");
         Self { socket, _phantom: Default::default() }
     }
 
     /// Run loop to receive from internal channel and send over socket.
     pub async fn run(&mut self, mut receiver: Receiver<M>) {
         while let Some(msg) = receiver.recv().await {
-            self.socket.send::<M>(msg.into(), 0).expect("Failed to send message")
+            let res = self.socket.send(msg.into()).await;
+            match res {
+                Ok(_) => (),
+                Err(e) => println!("Error pushing msg in socket: {e:?}"),
+            }
         }
     }
 }
 
 pub trait AdapterSend
 {
-    type M: Send + Sync + 'static + zmq::Sendable; //Into<Self::ExternalMessage> + 'static;
+    type M: Send + Sync + Into<Multipart> + 'static;// + tmq::Sendable; //Into<Self::ExternalMessage> + 'static;
 
     /// Initialize this `Adapter`.
-    fn init(ctx: &zmq::Context, endpoint: &str) -> (Sender<Self::M>, JoinHandle<()>) {
+    fn init(ctx: &tmq::Context, endpoint: &str) -> (Sender<Self::M>, JoinHandle<()>) {
         let (
             sender,
             receiver

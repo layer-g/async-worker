@@ -1,10 +1,12 @@
 use std::marker::PhantomData;
+use futures::StreamExt;
+use tmq::Multipart;
 use tokio::{sync::mpsc::{Sender, Receiver}, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use super::{EngineMessage, EngineError};
 
 pub struct RecvActor<M, E> {
-    socket: zmq::Socket,
+    socket: tmq::pull::Pull,
     _phantom: PhantomData<(M, E)>,
 }
 
@@ -13,50 +15,56 @@ impl<M, E> AdapterRecv for RecvActor<M, E> {
     type M = EngineMessage;
 }
 
-/// Send zmq messages
+/// Send tmq messages
 impl<M, E> RecvActor<M, E>
 where
-    M: Send + Sync + zmq::Sendable + std::fmt::Debug + TryFrom<zmq::Message, Error = E> + 'static,
-    E: Send + Sync + From<zmq::Error> + std::fmt::Debug,
+    // M: Send + Sync /* + tmq::Sendable*/ + std::fmt::Debug + TryFrom<tmq::Message, Error = E> + 'static,
+    M: Send + Sync /* + tmq::Sendable*/ + std::fmt::Debug + TryFrom<Multipart, Error = E> + 'static,
+    E: Send + Sync + From<tmq::TmqError> + std::fmt::Debug + 'static,
 {
     /// Create a new instance of self.
-    pub fn new(ctx: &zmq::Context, endpoint: &str) -> Self {
+    pub fn new(ctx: &tmq::Context, endpoint: &str) -> Self {
         // create + bind socket
-        let socket = ctx.socket(zmq::PULL).expect("Failed to create PUSH socket");
-        socket.connect(endpoint).expect("Failed to bind PUSH socket");
+        // let socket = ctx.socket(tmq::PULL).expect("Failed to create PUSH socket");
+        let socket = tmq::pull(&ctx);
+        let socket = socket.connect(endpoint).expect("Failed to bind PUSH socket");
 
         Self { socket, _phantom: Default::default() }
     }
 
-    pub fn receive_message(socket: &zmq::Socket) -> Result<M, E> {
-        socket.recv_msg(0)?.try_into()
-    }
+    // pub async fn receive_message(socket: &tmq::pull::Pull) -> AsyncResult<M> {
+    //     println!("waiting for socket to receive...");
+    //     let m: M = socket.recv_msg(0)?.try_into().unwrap();
+    //     // m.map_err(|e| std::io::Error{ repr: e})
+    //     // socket.poll(events, timeout_ms) // maybe try to poll instead?
+    //     Ok(m)
+    // }
+
+    // pub fn receive_message(socket: &tmq::Socket) -> Result<M, E> {
+    //     println!("waiting for socket to receive...");
+        // socket.recv_msg(0)?.try_into()
+        // socket.poll(events, timeout_ms) // maybe try to poll instead?
+    // }
 
     /// Run loop to receive from socket.
     pub async fn run(&mut self, sender: Sender<M>, token: CancellationToken) {
         tokio::pin!(token);
         loop {
-            println!("receiver loop");
-            match RecvActor::<M, E>::receive_message(&self.socket) {
-                Ok(msg) => {
-                    println!("receive loop - msg okay");
-                    let msg = msg.try_into().unwrap();
-                    // sender.send(msg).await.expect("Failed to send msg on tokio channel");
-                    // todo!()
-                    tokio::spawn({
-                        let sender = sender.clone();
-                        let token = token.clone();
-                        println!("receive loop - inside sub spawn");
-                        async move {
-                            tokio::select! {
-                                _ = sender.send(msg) => println!("sent"),//.await.expect("receive loop - inside async move");
-                                _ = token.cancelled() => println!("cancelled"),
-                            }
-                        }
-                    });
+            tokio::select! {
+                _ = token.cancelled() => {
+                    println!("token cancelled in tmq loop");
+                    break
                 }
-                Err(e) => {
-                    panic!("Error receiving zmq socket: {e:?}");
+
+                Some(msg) = self.socket.next() => {
+                    println!("tmq_receiver recvd!");
+                    let msg = msg.expect("Tmq pull socket receives a valid message.");
+                    let msg = msg.try_into().expect("Tmq pull socket should convert to M if VecDeque length == 1.");
+                    let res = sender.send(msg).await;
+                    match res {
+                        Ok(_) => (),
+                        Err(_) => break,
+                    }
                 }
             }
         }
@@ -66,18 +74,17 @@ where
 pub trait AdapterRecv {
     type M: Send
         + Sync
-        + zmq::Sendable
         + std::fmt::Debug
-        + TryFrom<zmq::Message, Error = Self::Error>
+        + TryFrom<tmq::Multipart, Error = Self::Error>
         + 'static;
     type Error: Send
         + Sync
-        + From<zmq::Error>
+        + From<tmq::TmqError>
         + std::fmt::Debug
         + 'static;
 
     /// Initialize this `Adapter`.
-    fn init(ctx: &zmq::Context, endpoint: &str) -> (Receiver<Self::M>, JoinHandle<()>, CancellationToken) {
+    fn init(ctx: &tmq::Context, endpoint: &str) -> (Receiver<Self::M>, JoinHandle<()>, CancellationToken) {
         let (
             sender,
             receiver

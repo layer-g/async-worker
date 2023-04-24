@@ -11,38 +11,57 @@ use thiserror::Error;
 #[derive(Debug)]
 pub struct EngineMessage(pub Bytes);
 
-#[derive(Debug, Clone, Copy, Error)]
+#[derive(Debug, Error)]
 pub enum EngineError {
     #[error("Default engine error.")]
     Unknown,
 
-    #[error("ZMQ error receiving {0:?}")]
-    Zmq(#[from] zmq::Error),
+    #[error("tmq error receiving {0:?}")]
+    Tmq(#[from] tmq::TmqError),
+
+    #[error("TMQ Multipart message longer than expected: {0}")]
+    MessageLength(usize),
 }
 
-// impl From<zmq::Message> for EngineMessage {
-//     fn from(value: zmq::Message) -> Self {
+// impl From<tmq::Message> for EngineMessage {
+//     fn from(value: tmq::Message) -> Self {
 //         Self(value.to_vec().into())
 //     }
 // }
 
-impl From<EngineMessage> for zmq::Message {
+impl From<EngineMessage> for tmq::Message {
     fn from(value: EngineMessage) -> Self {
         Self::from(value.0.to_vec())
     }
 }
 
-impl TryFrom<zmq::Message> for EngineMessage {
+impl From<EngineMessage> for tmq::Multipart {
+    fn from(value: EngineMessage) -> Self {
+        Self::from(vec![value])
+    }
+}
+
+// impl From<tmq::Multipart> for EngineMessage {
+//     fn from(value: tmq::Multipart) -> Self {
+
+//     }
+// }
+
+impl TryFrom<tmq::Multipart> for EngineMessage {
     type Error = EngineError;
 
-    fn try_from(value: zmq::Message) -> Result<Self, Self::Error> {
-        Ok(Self(value.deref().to_owned().into()))
+    fn try_from(mut value: tmq::Multipart) -> Result<Self, Self::Error> {
+        if value.len() != 1 {
+            return Err(EngineError::MessageLength(value.len()))
+        }
+        // safe to unwrap: already confirmed length == 1
+        Ok(Self(value.pop_front().unwrap().deref().to_owned().into()))
     }
 }
 
 pub struct EngineAdapter;
 
 impl AdapterSend for EngineAdapter {
-    // type ExternalMessage = zmq::Message;
+    // type ExternalMessage = tmq::Message;
     type M = EngineMessage;
 }
